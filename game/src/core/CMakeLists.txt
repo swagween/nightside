@@ -1,0 +1,3 @@
+NIGHTSIDE_ADD_SOURCES(
+Finder.cpp
+)
