@@ -1,4 +1,5 @@
 #include "nightside/core/Finder.hpp"
+#include <iostream>
 
 namespace nightside {
 

@@ -30,7 +30,7 @@ void Application::run() {
 
 	// game variables
 	Finder finder{};
-	Shader shader{"gameboy", finder};
+	Shader shader{"lighten", "gameboy", finder};
 
 	while (window.isOpen()) {
 		while (std::optional const event = window.pollEvent()) {
@@ -40,7 +40,7 @@ void Application::run() {
 
 		// update
 		ImGui::SFML::Update(window, clock.getElapsedTime());
-		shader.update();
+		shader.update(window, clock);
 
 		// render
 		window.clear();
