@@ -1,12 +1,11 @@
-#ifdef GL_ES
-precision mediump float;
-#endif
- 
-uniform sampler2D u_texture;
-uniform vec2 u_tex_coord;
+#version 330 core
 
-void main() {
-	vec4 to_color = texture2D(u_texture, u_tex_coord);
-	to_color.b = 1.0;
-	gl_FragColor = to_color;
+in vec2 fragTexCoord;  // The texture coordinates passed from the vertex shader
+uniform sampler2D textureSampler;  // The texture uniform to sample from
+
+out vec4 fragColor;  // The output color of the fragment
+
+void main()
+{
+    fragColor = texture(textureSampler, fragTexCoord);  // Sample the texture and assign to fragColor
 }

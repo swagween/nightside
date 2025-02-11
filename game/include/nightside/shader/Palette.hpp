@@ -17,7 +17,7 @@ class Palette {
 	Palette(std::string_view source, Finder& finder, sf::Vector2f dimensions = {f_swatch_dimensions_v});
 	void render(sf::RenderWindow& win);
 	void set_position(sf::Vector2f to_position);
-	sf::RenderTexture& get_texture();
+	sf::RenderTexture& const get_texture();
 	[[nodiscard]] auto get_position() const -> sf::Vector2f { return m_position; }
 	[[nodiscard]] auto get_dimensions() const -> sf::Vector2f { return m_dimensions; }
 

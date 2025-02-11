@@ -16,8 +16,6 @@ class Shader {
   private:
 	Palette m_palette;
 	sf::Shader m_shader{};
-	sf::RectangleShape m_box{};
-	sf::VertexArray m_vertices{};
 };
 
 } // namespace nightside

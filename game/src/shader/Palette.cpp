@@ -38,6 +38,6 @@ void Palette::render(sf::RenderWindow& win) {
 
 void Palette::set_position(sf::Vector2f to_position) { m_position = to_position; }
 
-sf::RenderTexture& Palette::get_texture() { return m_texture; }
+sf::RenderTexture& const Palette::get_texture() { return m_texture; }
 
 } // namespace nightside
