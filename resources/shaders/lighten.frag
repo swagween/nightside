@@ -1,6 +1,7 @@
 #version 110
 
 varying vec2 fragTexCoord;
+varying vec2 texPosition;
 uniform sampler2D palette;
 uniform sampler2D texture;
 uniform float u_key;
@@ -8,6 +9,7 @@ uniform float u_size;
 uniform vec2 u_mask_1;
 uniform vec2 u_mask_2;
 uniform vec2 u_mask_3;
+uniform vec2 u_offset;
 
 vec4 source = texture2D(texture, fragTexCoord);
 vec4 pixel = texture2D(texture, fragTexCoord);
@@ -22,6 +24,17 @@ void shift(float amount) {
 		vec4 next = texture2D(palette, vec2((fi + amount) / u_size, 0));
 		if (source.rgb == swatch.rgb) { pixel.rgb = next.rgb; }
 	}
+}
+
+vec4 saturateColor(vec4 inputColor, float saturationAmount) {
+    // Convert the color to grayscale using a luminance formula
+    float gray = dot(inputColor.rgb, vec3(0.2126, 0.7152, 0.0722)); // Using standard luminance weights
+
+    // Blend between the grayscale color and the original color based on the saturation amount
+    vec3 saturatedColor = mix(vec3(gray), inputColor.rgb, saturationAmount);
+
+    // Ensure that the result is within the valid range [0.0, 1.0]
+    return vec4(clamp(saturatedColor, 0.0, 1.0), inputColor.a);
 }
 
 bool isPointInConvexPolygon(vec2 point) {
@@ -53,7 +66,12 @@ bool isPointInConvexPolygon(vec2 point) {
 }
 
 void main() {
-	if (isPointInConvexPolygon(gl_FragCoord.xy)) { shift(u_key); }
+	float u_px = float(2.0);
+    vec2 pixelPoint = gl_FragCoord.xy;
+    pixelPoint = floor(pixelPoint / u_px) * u_px;
+	if (isPointInConvexPolygon(pixelPoint)) { shift(u_key); }
+	if (isPointInConvexPolygon(pixelPoint) && !isPointInConvexPolygon(pixelPoint + vec2(2.0, 2.0))) { pixel = saturateColor(pixel, 2.0); } 
+	if (isPointInConvexPolygon(pixelPoint) && !isPointInConvexPolygon(pixelPoint + vec2(8.0, 8.0))) { pixel = saturateColor(pixel, 1.5); } 
 	gl_FragColor = gl_Color * pixel;
 
 	// multiply it by the color
