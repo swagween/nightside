@@ -1,15 +1,14 @@
-#version 330 core
+#version 110
 
+attribute vec2 inPosition;  // Vertex position
+attribute vec2 inTexCoord;  // Texture coordinates
 
-// Input vertex attributes (position and texture coordinates)
-in vec2 inPosition;  // Vertex position (from the vertex buffer)
-in vec2 inTexCoord;  // Texture coordinates (from the vertex buffer)
-
-// Output to the fragment shader
-out vec2 fragTexCoord;  // Pass texture coordinates to fragment shader
+varying vec2 fragTexCoord;  // Pass texture coordinates to fragment shader
 
 void main()
 {
-    gl_Position = vec4(inPosition, 0.0, 1.0);  // Pass the position directly to OpenGL
-    fragTexCoord = inTexCoord;  // Pass the texture coordinates to the fragment shader
+    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+    gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;
+    gl_FrontColor = gl_Color;
+    fragTexCoord = gl_TexCoord[0].xy;
 }

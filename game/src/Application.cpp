@@ -30,7 +30,8 @@ void Application::run() {
 
 	// game variables
 	Finder finder{};
-	Shader shader{"lighten", "gameboy", finder};
+	Shader lighten{"lighten", "pioneer", finder};
+	Shader darken{"lighten", "pioneer", finder};
 
 	while (window.isOpen()) {
 		while (std::optional const event = window.pollEvent()) {
@@ -40,7 +41,8 @@ void Application::run() {
 
 		// update
 		ImGui::SFML::Update(window, clock.getElapsedTime());
-		shader.update(window, clock);
+		lighten.update(window, clock, 1.f);
+		darken.update(window, clock, -1.f);
 
 		// render
 		window.clear();
@@ -52,7 +54,8 @@ void Application::run() {
 		backdrop.setPosition(f_center_v);
 		window.draw(backdrop);
 
-		shader.render(window);
+		lighten.render(window, sf::Vector2f{0.f, -64.f});
+		darken.render(window, sf::Vector2f{0.f, 64.f});
 
 		ImGui::SFML::Render(window);
 		window.display();

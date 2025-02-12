@@ -25,9 +25,9 @@ Palette::Palette(std::string_view source, Finder& finder, sf::Vector2f dimension
 		swatch_box.setFillColor(m_swatches.back());
 		swatch_box.setPosition(m_position + offset);
 		m_texture.draw(swatch_box);
-		m_texture.display();
 		offset.x += m_dimensions.x;
 	}
+	m_texture.display();
 }
 
 void Palette::render(sf::RenderWindow& win) {
