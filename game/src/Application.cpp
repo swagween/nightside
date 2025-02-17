@@ -3,8 +3,8 @@
 #include "nightside/core/Finder.hpp"
 #include "nightside/shader/Shader.hpp"
 
-#include <imgui-SFML.h>
 #include <imgui.h>
+#include <imgui-SFML.h>
 
 #include <iostream>
 #include <string>
@@ -30,8 +30,9 @@ void Application::run() {
 
 	// game variables
 	Finder finder{};
-	Shader lighten{"lighten", "pioneer", finder};
 	Shader darken{"lighten", "pioneer", finder};
+	Shader point_light{"point_light", "pioneer", finder};
+	Shader point_light_2{"point_light", "pioneer", finder};
 
 	while (window.isOpen()) {
 		while (std::optional const event = window.pollEvent()) {
@@ -41,21 +42,25 @@ void Application::run() {
 
 		// update
 		ImGui::SFML::Update(window, clock.getElapsedTime());
-		lighten.update(window, clock, 1.f);
-		darken.update(window, clock, -1.f);
+		auto& io = ImGui::GetIO();
+		auto pos = sf::Glsl::Vec2{io.MousePos.x, window.getSize().y - io.MousePos.y};
+		darken.update(window, clock, -5.f, {});
+		point_light_2.update(window, clock, 0.f, {200.f, 300.f});
+		point_light.update(window, clock, 0.f, pos);
 
 		// render
 		window.clear();
 
 		sf::RectangleShape backdrop{};
-		backdrop.setFillColor(sf::Color{12, 12, 20});
+		backdrop.setFillColor(sf::Color{16, 8, 28});
 		backdrop.setSize(f_window_size_v);
 		backdrop.setOrigin(f_window_size_v / 2.f);
 		backdrop.setPosition(f_center_v);
 		window.draw(backdrop);
 
-		lighten.render(window, sf::Vector2f{0.f, -64.f});
-		darken.render(window, sf::Vector2f{0.f, 64.f});
+		darken.render(window, sf::Vector2f{0.f, 0.f});
+		point_light_2.render(window, sf::Vector2f{0.f, 0.f});
+		point_light.render(window, sf::Vector2f{0.f, 0.f});
 
 		ImGui::SFML::Render(window);
 		window.display();

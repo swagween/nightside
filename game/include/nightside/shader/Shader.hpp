@@ -10,7 +10,7 @@ class Finder;
 class Shader {
   public:
 	Shader(std::string_view source, std::string_view palette_source, Finder& finder);
-	void update(sf::RenderWindow& win, sf::Clock& clock, float key);
+	void update(sf::RenderWindow& win, sf::Clock& clock, float key, sf::Vector2f position);
 	void render(sf::RenderWindow& win, sf::Vector2f offset);
 
   private:
