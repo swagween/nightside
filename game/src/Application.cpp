@@ -32,7 +32,6 @@ void Application::run() {
 	Finder finder{};
 	Shader darken{"lighten", "pioneer", finder};
 	Shader point_light{"point_light", "pioneer", finder};
-	Shader point_light_2{"point_light", "pioneer", finder};
 
 	while (window.isOpen()) {
 		while (std::optional const event = window.pollEvent()) {
@@ -44,8 +43,8 @@ void Application::run() {
 		ImGui::SFML::Update(window, clock.getElapsedTime());
 		auto& io = ImGui::GetIO();
 		auto pos = sf::Glsl::Vec2{io.MousePos.x, window.getSize().y - io.MousePos.y};
-		darken.update(window, clock, -5.f, {});
-		point_light_2.update(window, clock, 0.f, {200.f, 300.f});
+		// darken.update(window, clock, -5.f, {});
+		//  point_light.update(window, clock, 0.f, {200.f, 320.f});
 		point_light.update(window, clock, 0.f, pos);
 
 		// render
@@ -58,8 +57,7 @@ void Application::run() {
 		backdrop.setPosition(f_center_v);
 		window.draw(backdrop);
 
-		darken.render(window, sf::Vector2f{0.f, 0.f});
-		point_light_2.render(window, sf::Vector2f{0.f, 0.f});
+		// darken.render(window, sf::Vector2f{0.f, 0.f});
 		point_light.render(window, sf::Vector2f{0.f, 0.f});
 
 		ImGui::SFML::Render(window);
