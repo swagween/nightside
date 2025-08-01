@@ -6,70 +6,79 @@
 #define MAX_POINT_LIGHTS 5
 #define MAX_SPOT_LIGHTS 5
 
+#define USING_LIGHT_COLORS false
+
 varying vec2 fragTexCoord;
 varying vec2 texPosition;
 uniform sampler2D palette;
 uniform sampler2D texture;
 
+uniform float u_px;
+
+uniform int palette_size;
 
 //point light variables
-uniform float pointlight_key; //this is always 0 in the source; could potentialy be moved to an array but not enough context
-uniform float pointlight_size;
 uniform int pointlight_count;
+#if USING_LIGHT_COLORS
+uniform vec4 pointlight_color[MAX_POINT_LIGHTS];
+#endif
 uniform vec2 pointlight_position[MAX_POINT_LIGHTS];
-uniform int pointlight_luminosity[MAX_POINT_LIGHTS];
 uniform float pointlight_radius[MAX_POINT_LIGHTS];
-//uniform vec2 u_offset[MAX_POINT_LIGHTS]; this wasnt used
+uniform float pointlight_luminence[MAX_POINT_LIGHTS];
+uniform float pointlight_attenuation_constant[MAX_POINT_LIGHTS];
+uniform float pointlight_attenuation_linear[MAX_POINT_LIGHTS];
+uniform float pointlight_attenuation_quadratic[MAX_POINT_LIGHTS];
+uniform float pointlight_distance_scaling[MAX_POINT_LIGHTS];
+uniform float pointlight_distance_flat[MAX_POINT_LIGHTS];
 
-//spot light, which is kinda just a triangle i guess
+//spot light variables
 uniform int spotlight_count;
-uniform float spotlight_key[MAX_SPOT_LIGHTS];
-uniform float spotlight_size[MAX_SPOT_LIGHTS];
-uniform vec2 spotlight_vertex0[MAX_SPOT_LIGHTS];
-uniform vec2 spotlight_vertex1[MAX_SPOT_LIGHTS];
-uniform vec2 spotlight_vertex2[MAX_SPOT_LIGHTS];
-uniform vec2 u_offset[MAX_SPOT_LIGHTS];
+#if USING_LIGHT_COLORS
+uniform vec4 spotlight_color[MAX_SPOT_LIGHTS];
+#endif
+uniform vec2 spotlight_position[MAX_SPOT_LIGHTS];
+uniform vec2 spotlight_direction[MAX_SPOT_LIGHTS];
+uniform float spotlight_radius[MAX_SPOT_LIGHTS];
+uniform float spotlight_luminence[MAX_SPOT_LIGHTS];
+uniform float spotlight_attenuation_constant[MAX_SPOT_LIGHTS];
+uniform float spotlight_attenuation_linear[MAX_SPOT_LIGHTS];
+uniform float spotlight_attenuation_quadratic[MAX_SPOT_LIGHTS];
+uniform float spotlight_cutoff[MAX_SPOT_LIGHTS];
+uniform float spotlight_outerCutoff[MAX_SPOT_LIGHTS];
+uniform float spotlight_distance_scaling[MAX_SPOT_LIGHTS];
+uniform float spotlight_distance_flat[MAX_SPOT_LIGHTS];
+
+
+// **** end of uniform variables
 
 vec4 source = texture2D(texture, fragTexCoord);
+vec4 pixel = texture2D(texture, fragTexCoord);
 
 float cross2D(vec2 a, vec2 b) { return a.x * b.y - a.y * b.x; }
 
-vec4 shift(float amount, float size) {
-    vec4 pixel = source;
-	int i_size = int(size);
-	for (int i = 0; i < i_size; i++) {
+void global_shift(float amount) {
+	float f_size = float(palette_size);
+	for (int i = 0; i < palette_size; i++) {
 		float fi = float(i);
-		vec4 swatch = texture2D(palette, vec2(fi / size, 0));
+		vec4 swatch = texture2D(palette, vec2(fi / f_size, 0));
+		vec4 next = texture2D(palette, vec2((fi + amount) / f_size, 0));
+		if (source.rgb == swatch.rgb) { pixel.rgb = next.rgb; }
+	}
+}
+
+vec4 shift(float amount) {
+    vec4 pixel = source;
+
+	for (int i = 0; i < palette_size; i++) {
+		float fi = float(i);
+		vec4 swatch = texture2D(palette, vec2(fi / float(palette_size), 0));
 		if (source.rgb == swatch.rgb) { 
             //need something here to clamp this texture pull to the border, if its not already there
-			pixel = texture2D(palette, vec2((fi + amount) / size, 0)); 
+            fi = clamp((fi + amount) / float(palette_size), 0.0, 1.0);
+			pixel = texture2D(palette, vec2(fi, 0)); 
 		}
 	}
     return pixel;
-}
-
-
-bool isPointInConvexPolygon(vec2 point, int light) {
-
-    vec2 edge = spotlight_vertex1[light] - spotlight_vertex0[light];
-    vec2 toPoint = point - spotlight_vertex0[light];
-    if(cross2D(edge, toPoint) < 0.0){
-        return false;
-    }
-
-    edge = spotlight_vertex2[light] - spotlight_vertex1[light];
-    toPoint = point - spotlight_vertex1[light];
-    if(cross2D(edge, toPoint) < 0.0){
-        return false;
-    }
-
-    edge = spotlight_vertex0[light] - spotlight_vertex2[light];
-    toPoint = point - spotlight_vertex2[light];
-    if(cross2D(edge, toPoint) < 0.0){
-        return false;
-    }
-
-    return true;
 }
 
 vec4 saturateColor(vec4 inputColor, float saturationAmount) {
@@ -78,66 +87,98 @@ vec4 saturateColor(vec4 inputColor, float saturationAmount) {
 	return vec4(clamp(saturatedColor, 0.0, 1.0), inputColor.a);
 }
 
-//im pretty sure this can be simplified
-vec2 isPointInRadius(vec2 point, float dist, vec2 position, float radius) {
-	float inside = 1.0;
-	float dither = 0.0;
-	float currdist = radius * dist * dist;
-	float dither_threshold = currdist * 0.4;
-	vec2 diff = vec2(position - point);
-	if (length(diff) > (currdist + dither_threshold)) {
-		inside = 0.0;
-	} 
-    else if (length(diff) > currdist) {
-		float t = mod(point.x, 4.0);
-		float u = mod(point.y, 4.0);
-		if ((t == 0.0 && u == 2.0) || (t == 2.0 && u == 0.0)) { 
-            dither = 1.0; 
-        }
-	}
+float CalculatePointLightShift(vec2 point, int light) {
+    float lightDistance = length(point - pointlight_position[light]);
+    if(lightDistance == 0.0 || lightDistance > pointlight_radius[light]) {
+        return 0.0;
+    }
+    lightDistance = lightDistance / (pointlight_radius[light] * pointlight_distance_scaling[light] + pointlight_distance_flat[light]);
+    //vec2 lightDir = point - pointlight_position[light];
+    //lightDir = lightDir / lightDistance;
 
-	return vec2(inside, dither);
+    float attenuation = 1.0 / 
+                    (
+                        pointlight_attenuation_constant[light] +
+                        pointlight_attenuation_linear[light] * lightDistance +
+                        pointlight_attenuation_quadratic[light] * lightDistance * lightDistance
+                    );
+    return pointlight_luminence[light] * attenuation;
+}
+
+float CalculateSpotLightShift(vec2 point, int light) {
+    vec2 lightDirection = point - spotlight_position[light];
+    float lightDistance = length(lightDirection);
+
+    if(lightDistance == 0.0 || lightDistance > spotlight_radius[light]) {
+        return 0.0;
+    }
+    lightDirection = normalize(lightDirection); //normalized
+    float spotDot = dot(lightDirection, -normalize(spotlight_direction[light]));
+    if(spotDot < spotlight_outerCutoff[light]){
+        return 0.0;
+    }
+    float spotValue = smoothstep(spotlight_outerCutoff[light], spotlight_cutoff[light], spotDot);
+    //float spotAttenuation = pow(spotValue, spotlight_exponent[light]); // i need to dick with this to see what it does
+
+    lightDistance = lightDistance / spotlight_radius[light] * spotlight_distance_scaling[light] + spotlight_distance_flat[light];
+
+    float attenuation = 1.0 / 
+                    (
+                        spotlight_attenuation_constant[light] +
+                        spotlight_attenuation_linear[light] * lightDistance +
+                        spotlight_attenuation_quadratic[light] * lightDistance * lightDistance
+                    );
+    return spotlight_luminence[light] * attenuation * spotValue;
 }
 
 void main() {
-	float u_px = float(2.0);
+
 	vec2 pixelPoint = gl_FragCoord.xy;
-	pixelPoint = floor(pixelPoint / u_px) * u_px;
-	bool to_discard = true;
-	//if to_discard would be the same light to light, but it inside the light for loop
-
-	float total_amount = 0.0;
-    int plc = int(pointlight_count);
-	for(int light = 0; light < plc; light++){
-        for (int i = pointlight_luminosity[light]; i >= 0; i--) {
-
-
-            float fi = float(i);
-            vec2 result = isPointInRadius(pixelPoint, fi, pointlight_position[light], pointlight_radius[light]);
-            if (result.x == 1.0) {
-                float dither = fi + result.y;
-                total_amount += pointlight_key - dither;
-                to_discard = false;
-            }
-        }
-    }
-	if (to_discard) { discard; }
-
-    for(int light = 0; light < spotlight_count; light++){
-        if (isPointInConvexPolygon(pixelPoint, light)) { 
-            total_amount += spotlight_key[light];
-            vec4 pixel = shift(spotlight_key[light], 1.0);
-
-            if(!isPointInConvexPolygon(pixelPoint + vec2(2.0, 2.0), light)){
-                pixel = saturateColor(pixel, 1.5); 
-            }
-            
-            if (!isPointInConvexPolygon(pixelPoint + vec2(8.0, 8.0), light)) { 
-                pixel = saturateColor(pixel, 1.25); 
-            }
+	pixelPoint = ceil(floor(pixelPoint / u_px) * u_px);
 	gl_FragColor = gl_Color * pixel;
+	vec2 offset = texPosition;
 
-	gl_FragColor = gl_Color * shift(total_amount, 1.0);
+	float highest_amount = 0.0;
+	for(int light = 0; light < pointlight_count; light++){
+        //int localShift = CalculatePointLightShift(pixelPoint, light);
+        //if(result.x == 1.0){
+            //i think theres a better way to calculate dithering, but ill come back to this
+            //localShift = clamp(localShift - 1, 0, localShift);
+        //}
+        highest_amount = max(highest_amount, CalculatePointLightShift(pixelPoint, light));
+    }
+    for(int light = 0; light < spotlight_count; light++){
+        highest_amount = max(highest_amount, CalculateSpotLightShift(pixelPoint, light));
+    }
+    
+    float fraction = fract(highest_amount);
+    highest_amount = highest_amount - fraction;
+	
+
+	// dithering is broken on fullscreen
+    if(highest_amount >= 1.0) {
+	if(fraction < 0.1) {
+		float t = mod(pixelPoint.x, 2.0 * u_px);
+		float u = mod(pixelPoint.y, 2.0 * u_px);
+		if ((t == 0.0 && u == u_px ) || (t == u_px  && u == 0.0) || (t == u_px  && u == u_px )) { 
+            highest_amount -= 1.0;
+        }
+    } else if(fraction < 0.15) {
+		float t = mod(pixelPoint.x, 2.0 * u_px);
+		float u = mod(pixelPoint.y, 2.0 * u_px);
+		if ((t == 0.0 && u == u_px ) || (t == u_px && u == 0.0)) { 
+            highest_amount -= 1.0;
         }
     }
+    else if(fraction < 0.2) {
+		float t = mod(pixelPoint.x, 4.0 * u_px);
+		float u = mod(pixelPoint.y, 4.0 * u_px);
+		if ((t == 0.0 && u == 0.0)) { 
+			highest_amount -= 1.0;
+        }
+    }
+    }
+	
+	gl_FragColor = gl_Color * shift(highest_amount);
+
 }
